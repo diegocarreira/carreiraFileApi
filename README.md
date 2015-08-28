@@ -20,7 +20,8 @@
 
 # Metodos:
 
-## Salvar imagem: [POST] ## `{{url_do_servidor}}/api/containers/images/upload`
+## Salvar imagem: [POST]
+ `{{url_do_servidor}}/api/containers/images/upload`
 
 ### parâmetros:
 
@@ -38,7 +39,8 @@ description -> (comentario sobre a imagem)
 
 ---
 
-## Buscar imagem: [GET] ## `{{url_do_servidor}}/api/images/{{id_da_imagem_retornado_no_metodo_acima}}`
+## Buscar imagem: [GET]
+ `{{url_do_servidor}}/api/images/{{id_da_imagem_retornado_no_metodo_acima}}`
 
 ### tipo de retorno (mimetype): ```image\jpeg``` ou ```image\png``` ou ```image\gif```
 
@@ -64,7 +66,8 @@ description -> (comentario sobre o arquivo)
 
 ---
 
-## Buscar documento: [GET] ## `{{url_do_servidor}}/api/documents/{{id_do_doc_retornado_no_metodo_acima}}`
+## Buscar documento: [GET]
+`{{url_do_servidor}}/api/documents/{{id_do_doc_retornado_no_metodo_acima}}`
 
 ### tipo de retorno: ```arquivo será baixado automaticamente```
 
