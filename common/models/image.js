@@ -5,8 +5,6 @@ module.exports = function(Image) {
 		var fs = require('fs');
 		var pathBase = __dirname + '/../../server/storage/images/';
 
-		// console.log('entrouuuu');
-		// console.log(ctx.args.id);
 		if(!ctx.args.id){
 			ctx.result = {'error': 'file id is required'};
 	  		next();
@@ -15,8 +13,6 @@ module.exports = function(Image) {
 		var id = ctx.args.id;
 
 		Image.findById(id, function(err,ret){
-			// console.log('ret');
-			// console.log(ret);
 			if( (err) || (!ret) ){
 				ctx.result = {'error': 'File not found for this id'};
 	  			next();
@@ -32,12 +28,8 @@ module.exports = function(Image) {
 			fs.readFile(pathBase+id+'.'+extension, function (err,data) {
 			  if(data){
 
-
-			 	ctx.res.writeHead(200, {'Content-Type': 'text/html'});
-			 	ctx.res.write('<html><body><img src="data:image/jpeg;base64,')
-			 	ctx.res.write(new Buffer(data).toString('base64'));
-			 	ctx.res.end('"/></body></html>');
-
+			 	ctx.res.writeHead(200, {'Content-Type': 'image/'+extension});
+			 	ctx.res.end(data);
 
 			  }else{
 			  	ctx.result = {'error': 'File can not be load, because is not found in directory'};
