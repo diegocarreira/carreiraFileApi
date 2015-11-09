@@ -1,73 +1,81 @@
+/*
+* Modulo para redimencionar as imagens
+* https://www.npmjs.com/package/image-resize-stream#createstream-width-height-options
+*/
+
 module.exports = function(Container) {
 	var fs = require('fs');
-
+	var pathBase = __dirname + '/../../server/storage/';
+	// Tipos de extensão dos arquivos, adicionar sempre em uppercase
+	var fileTypes = {
+		images: ['JPG', 'JPEG', 'PNG', 'GIF'],
+		documents: ['JPG', 'JPEG', 'PNG', 'GIF', 'DOC', 'DOCX', 'ODT', 'PDF', 'XLS']
+	}
 
 	Container.afterRemote('**', function (ctx, user, next) {
 
 		if(ctx.methodString == 'container.upload'){
-
 			var fields = ctx.result.result.fields;
-
-			var pathBase = __dirname + '/../../server/storage/';
-			if(!ctx.result.result.files.file){
+			if(!ctx.result.result.files.file && !fields.base64){
 				ctx.result = {'error': 'param file is required'};
 				next();
+				return;
 			}
-			var file = ctx.result.result.files.file[0];
+			var container, fileName, fileExtension, file, ctx, date = new Date();
 
-			var container = file.container;
-			var fileName = file.name.split('.')[0];
-			var fileExtension = file.name.split('.')[1];
-			var date = new Date();
-
-			if(container == 'images'){
-				if(
-					fileExtension != 'jpg' &&
-					fileExtension != 'JPG' &&
-					fileExtension != 'jpeg' &&
-					fileExtension != 'JPEG' &&
-					fileExtension != 'png' &&
-					fileExtension != 'PNG' &&
-					fileExtension != 'gif'
-				){
-					ctx.result = {'error': 'To container  `images` file must have extensions jpg, png, or gif'};
-			  		next();
-				}
-			}else if(container == 'documents'){
-				if(
-					fileExtension != 'jpg' &&
-					fileExtension != 'JPG' &&
-					fileExtension != 'jpeg' &&
-					fileExtension != 'JPEG' &&
-					fileExtension != 'png' &&
-					fileExtension != 'PNG' &&
-					fileExtension != 'gif' &&
-					fileExtension != 'doc' &&
-					fileExtension != 'docx' &&
-					fileExtension != 'odt' &&
-					fileExtension != 'pdf' &&
-					fileExtension != 'xls'
-				){
-					ctx.result = {'error': 'To container  `documents` file must have extensions (jpg, png, gif, doc, docx, odt, pdf, xls)'};
-			  		next();
-				}
+			if(fields.base64){
+				var base64 = (fields.base64 + "").split(',');
+				var mimetype = base64[0].split('/')[1].split(';')[0];
+				fileExtension = mimetype;
+				fileName = date.getTime();
+				container = "images";
+				var write = fs.writeFileSync(pathBase + "/images/" + fileName + '.' + fileExtension, base64[1], 'base64');
 			}else{
-				ctx.result = {'error': 'Container not permitted'};
-		  		next();
+				file = ctx.result.result.files.file[0];
+				container = file.container;
+				fileName = file.name.split('.')[0];
+				fileExtension = file.name.split('.')[1];
 			}
 
-			fs.readFile(pathBase+container+'/'+fileName+'.'+fileExtension, function (err,data) {
+			//Verifica se o arquivo está no formatos disponíveis
+			if(fileTypes[container].indexOf(fileExtension.toUpperCase()) == -1){
+				ctx.result = {'error': 'Invalid format, formats available for the type `' + container + '` (' + fileTypes[container].join() + ')'};
+				next(); return;
+			}
 
-			  if(data){
-			  	insertFileRow(container, date, fileExtension, fields.description);
-			  }else{
-			  	ctx.result = {'error': 'File can not be saved'};
-			  	next();
-			  }
+			//Le o arquivo e manda inserir
+			var teste = pathBase+container+'/'+fileName+'.'+fileExtension;
 
+			fs.readFile(teste, function (err,data) {
+				if(err){
+					console.log("Deu merda aqui: ", err);
+				}
+				if(data){
+					console.log('fileexists');
+					insertFileRow(fields.description);
+				}else{
+					ctx.result = {'error': 'File can not be saved'};
+					next();
+				}
 			});
 
-			var insertFileRow = function(container, date, extension, description){
+			function renameFile(newFileName){
+				var filePathOriginal = pathBase + container + '/' + fileName + '.' + fileExtension;
+				var filePathNew = pathBase+container + '/' + newFileName + '.' + fileExtension;
+
+				fs.rename(filePathOriginal, filePathNew, function (err) {
+					if (err){
+						console.log("Deu merda aqui: ", err);
+						ctx.result = {'error': 'File can not be renamed'};
+							next();
+					}
+					console.log('renamed complete');
+					ctx.result = {'result': newFileName};
+					next();
+				});
+			}
+
+			function insertFileRow(description){
 				var entity = {};
 				if(container == 'images'){
 					entity = Container.app.models.image;
@@ -75,8 +83,9 @@ module.exports = function(Container) {
 					entity = Container.app.models.document;
 				}
 
-				entity.upsert({date: date, extension: extension, description: description}, function(err,ret){
+				entity.upsert({date: date, extension: fileExtension, description: description}, function(err,ret){
 					if(err){
+						console.log("Deu merda aqui: ", err);
 						ctx.result = {'error': err};
 						next();
 					}else{
@@ -85,26 +94,12 @@ module.exports = function(Container) {
 				});
 			};
 
-
-			var renameFile = function(newFileName){
-				fs.rename(pathBase+container+'/'+fileName+'.'+fileExtension, pathBase+container+'/'+newFileName+'.'+fileExtension, function (err) {
-					if (err){
-						ctx.result = {'error': 'File can not be renamed'};
-			  			next();
-					}
-					ctx.result = {'result': newFileName};
-					next();
-				});
-			}
-
-
-
-
 		}else{
+			console.log("Aquiiiiiii");
 			next();
 		}
-	});
 
+	});
 
 
 
